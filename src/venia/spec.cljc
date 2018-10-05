@@ -138,7 +138,7 @@
 (s/def :field/alias :query/alias)
 
 (s/def :fragment/name string?)
-(s/def :fragment/type keyword?)
+
 (s/def :fragment/fields :venia/fields)
 (s/def :venia/fragment (s/keys :req [:fragment/name :fragment/type :fragment/fields]))
 (s/def :venia/fragments (s/coll-of :venia/fragment :min-count 1))
@@ -148,7 +148,12 @@
 (s/def :venia/operation (s/keys :req [:operation/type :operation/name]))
 
 (s/def :variable/name string?)
-(s/def :variable/type keyword?)
+
+(s/def :variable/keyword keyword?)
+(s/def :variable/list (s/coll-of keyword? :count 1))
+(s/def :variable/type (s/or :keyword :variable/keyword
+                            :list :variable/list))
+
 (s/def :query/variable (s/keys :req [:variable/name :variable/type]
                                :opt [:variable/default]))
 (s/def :venia/variables (s/coll-of :query/variable :min-count 1))

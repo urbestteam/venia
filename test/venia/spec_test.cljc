@@ -56,7 +56,7 @@
                                                                                            :venia/nested-field-children [[:venia/field :name]
                                                                                                                          [:venia/field :email]]}]
                                                                      [:venia/nested-field-with-fragments {:venia/nested-field-root :pet
-                                                                                                          :venia/fragments [:fragment/cat :fragment/dog]}]]}]]}]
+                                                                                                          :venia/fragments         [:fragment/cat :fragment/dog]}]]}]]}]
            (vs/query->spec {:venia/queries [[:employee {:id 1 :active true} [:name :address [:friends [:name :email]] [:pet [:fragment/cat :fragment/dog]]]]]}))))
   (testing "Valid vector with single query and top level fragments, should return conformed data"
     (is (= [:venia/query-def {:venia/queries [[:query/data {:query  :employee
@@ -112,9 +112,9 @@
     (is (= [:venia/query-def {:venia/operation {:operation/type :query
                                                 :operation/name "employeeQuery"}
                               :venia/variables [{:variable/name "id"
-                                                 :variable/type :Int}
+                                                 :variable/type [:keyword :Int]}
                                                 {:variable/name "name"
-                                                 :variable/type :String}]
+                                                 :variable/type [:keyword :String]}]
                               :venia/fragments [{:fragment/name   "comparisonFields"
                                                  :fragment/type   :Worker
                                                  :fragment/fields [[:venia/field :name] [:venia/field :address]
@@ -132,8 +132,8 @@
                                                                                                 :active false}
                                                                                        :fields :fragment/comparisonFields}
                                                                          :query/alias :boss}]]}]
-           (vs/query->spec {:venia/operation {:operation/type :query
-                                              :operation/name "employeeQuery"}
+           (vs/query->spec {:venia/operation  {:operation/type :query
+                                               :operation/name "employeeQuery"}
                             :venia/variables [{:variable/name "id"
                                                :variable/type :Int}
                                               {:variable/name "name"

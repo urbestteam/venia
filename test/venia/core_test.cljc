@@ -57,22 +57,24 @@
 
 (deftest variables->str-test
   (is (= "$id:Int" (v/variables->str [{:variable/name "id"
-                                       :variable/type :Int}])))
+                                       :variable/type [:keyword :Int]}])))
   (is (= "$id:Int=2" (v/variables->str [{:variable/name    "id"
-                                         :variable/type    :Int
+                                         :variable/type    [:keyword :Int]
                                          :variable/default 2}])))
   (is (= "$id:Int,$name:String" (v/variables->str [{:variable/name "id"
-                                                    :variable/type :Int}
+                                                    :variable/type [:keyword :Int]}
                                                    {:variable/name "name"
-                                                    :variable/type :String}])))
+                                                    :variable/type [:keyword :String]}])))
   (is (= "$id:Int=1,$name:String=\"my-name\"" (v/variables->str [{:variable/name    "id"
-                                                                  :variable/type    :Int
+                                                                  :variable/type    [:keyword :Int]
                                                                   :variable/default 1}
                                                                  {:variable/name    "name"
-                                                                  :variable/type    :String
+                                                                  :variable/type    [:keyword :String]
                                                                   :variable/default "my-name"}])))
   (is (= "" (v/variables->str nil)))
-  (is (= "" (v/variables->str []))))
+  (is (= "" (v/variables->str [])))
+  (is (= "$id:[Int]" (v/variables->str [{:variable/name "id"
+                                         :variable/type [:list [:Int]]}]))))
 
 (deftest fragment->str-test
   (is (= "fragment comparisonFields on Worker{name,address,friends{name,email}}"
@@ -256,6 +258,21 @@
           result (v/graphql-query data)]
       (is (= query-str result))))
 
+  (testing "Should create a valid graphql query with variables of list type"
+    (let [data      {:venia/operation {:operation/type :query
+                                       :operation/name "employeeQuery"}
+                     :venia/variables [{:variable/name "id"
+                                        :variable/type [:Int]}
+                                       {:variable/name "name"
+                                        :variable/type :String}]
+                     :venia/queries   [[:employee {:id     :$id
+                                                   :active true
+                                                   :name   :$name}
+                                        [:name :address [:friends [:name :email]]]]]}
+          query-str (str "query employeeQuery($id:[Int],$name:String){employee(id:$id,active:true,name:$name){name,address,friends{name,email}}}")
+          result    (v/graphql-query data)]
+      (is (= query-str result))))
+
   (testing "Should create a valid graphql query with variables, aliases and fragments"
     (let [data {:venia/operation {:operation/type :query
                                   :operation/name "employeeQuery"}
@@ -293,3 +310,4 @@
           query-str (str "mutation AddProjectToEmployee($id:Int!,$project:ProjectNameInput!){addProject(employeeId:$id,project:$project){allocation,name}}")
           result (v/graphql-query data)]
       (is (= query-str result)))))
+

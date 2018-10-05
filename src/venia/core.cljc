@@ -119,13 +119,23 @@
          (interpose ",")
          (apply str))))
 
+;; TODO: add support for required list and matrix
+(defn var-type->str
+  [[def-type variable]]
+  (case def-type
+    :keyword
+    (name variable)
+
+    :list
+    (str "[" (name (first variable)) "]")))
+
 (defn variables->str
   "Given a vector of variable maps, formats them and concatenates to string.
 
   E.g. (variables->str [{:variable/name \"id\" :variable/type :Int}]) => \"$id: Int\""
   [variables]
   (->> (for [{var-name :variable/name var-type :variable/type var-default :variable/default} variables]
-         (str "$" var-name ":" (name var-type) (when var-default (str "=" (arg->str var-default)))))
+         (str "$" var-name ":" (var-type->str var-type) (when var-default (str "=" (arg->str var-default)))))
        (interpose ",")
        (apply str)))
 
