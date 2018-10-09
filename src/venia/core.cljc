@@ -126,6 +126,9 @@
     :keyword
     (name variable)
 
+    :required
+    (str (var-type->str (second variable)) "!")
+
     :list
     (str "[" (name (first variable)) "]")))
 

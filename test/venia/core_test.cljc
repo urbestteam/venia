@@ -74,7 +74,9 @@
   (is (= "" (v/variables->str nil)))
   (is (= "" (v/variables->str [])))
   (is (= "$id:[Int]" (v/variables->str [{:variable/name "id"
-                                         :variable/type [:list [:Int]]}]))))
+                                         :variable/type [:list [:Int]]}])))
+  (is (= "$id:[Int]!" (v/variables->str [{:variable/name "id"
+                                          :variable/type [:required [:required [:list [:Int]]]]}]))))
 
 (deftest fragment->str-test
   (is (= "fragment comparisonFields on Worker{name,address,friends{name,email}}"
@@ -88,53 +90,53 @@
 
 (deftest graphql-query-test
   (testing "Should create a valid graphql string."
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [:name :address [:friends [:name :email]]]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [:name :address [:friends [:name :email]]]]]}
           query-str "{employee(id:1,active:true){name,address,friends{name,email}}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string with __typename meta field included"
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [:name :address :meta/typename [:friends [:meta/typename :name :email]]]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [:name :address :meta/typename [:friends [:meta/typename :name :email]]]]]}
           query-str "{employee(id:1,active:true){name,address,__typename,friends{__typename,name,email}}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string using params on nested fields that doesnt't have nested fields."
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [:name :address [:boss_name {:id 1}]]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [:name :address [:boss_name {:id 1}]]]]}
           query-str "{employee(id:1,active:true){name,address,boss_name(id:1)}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string using params on nested fields."
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [:name :address [:friends {:id 1} [:name :email]]]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [:name :address [:friends {:id 1} [:name :email]]]]]}
           query-str "{employee(id:1,active:true){name,address,friends(id:1){name,email}}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should serialize uuids to strings"
-    (let [data {:venia/queries [[:employee {:id #uuid "db60501e-26c0-43d0-a4d8-21bd401acf6b"}
-                                 [:name]]]}
+    (let [data      {:venia/queries [[:employee {:id #uuid "db60501e-26c0-43d0-a4d8-21bd401acf6b"}
+                                      [:name]]]}
           query-str "{employee(id:\"db60501e-26c0-43d0-a4d8-21bd401acf6b\"){name}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string using params on fields."
-    (let [data {:venia/queries [[:employee [[:name {:isEmpty false}] :address [:friends [:name [:email {:isValid true}]]]]]]}
+    (let [data      {:venia/queries [[:employee [[:name {:isEmpty false}] :address [:friends [:name [:email {:isValid true}]]]]]]}
           query-str "{employee{name(isEmpty:false),address,friends{name,email(isValid:true)}}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string using params on different nested levels of fields."
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [[:name {:isEmpty false}] :address [:friends {:id 1} [:name [:email {:isValid true}]]]]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [[:name {:isEmpty false}] :address [:friends {:id 1} [:name [:email {:isValid true}]]]]]]}
           query-str "{employee(id:1,active:true){name(isEmpty:false),address,friends(id:1){name,email(isValid:true)}}}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string when no args are required and no fields are specified."
-    (let [data {:venia/queries [[:getDate]]}
+    (let [data      {:venia/queries [[:getDate]]}
           query-str "{getDate}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string there are args and no fields are specified."
-    (let [data {:venia/queries [[:sayHello {:name "Tom"}]]}
+    (let [data      {:venia/queries [[:sayHello {:name "Tom"}]]}
           query-str "{sayHello(name:\"Tom\")}"]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string there are no args but fields are specified."
-    (let [data {:venia/queries [[:sayHello [:name]]]}
+    (let [data      {:venia/queries [[:sayHello [:name]]]}
           query-str "{sayHello{name}}"]
       (is (= query-str (v/graphql-query data)))))
 
@@ -143,119 +145,119 @@
                     :cljs js/Error) (v/graphql-query []))))
 
   (testing "Should create a valid graphql string with query aliases"
-    (let [data {:venia/queries [{:query/data  [:employee {:id 1 :active true} [:name :address [:friends [:name :email]]]]
-                                 :query/alias :workhorse}
-                                {:query/data  [:employee {:id 2 :active true} [:name :address [:friends [:name :email]]]]
-                                 :query/alias :boss}]}
+    (let [data      {:venia/queries [{:query/data  [:employee {:id 1 :active true} [:name :address [:friends [:name :email]]]]
+                                      :query/alias :workhorse}
+                                     {:query/data  [:employee {:id 2 :active true} [:name :address [:friends [:name :email]]]]
+                                      :query/alias :boss}]}
           query-str (str "{workhorse:employee(id:1,active:true){name,address,friends{name,email}},"
                          "boss:employee(id:2,active:true){name,address,friends{name,email}}}")]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql string with field aliases"
-    (let [data {:venia/queries [[:employee {:id 1 :active true} [:name :address
-                                                                 {:field/data [[:friends [:name :email]]]
-                                                                  :field/alias :mates}
-                                                                 {:field/data [[:friends [:name :email]]]
-                                                                  :field/alias :enemies}]]]}
+    (let [data      {:venia/queries [[:employee {:id 1 :active true} [:name :address
+                                                                      {:field/data  [[:friends [:name :email]]]
+                                                                       :field/alias :mates}
+                                                                      {:field/data  [[:friends [:name :email]]]
+                                                                       :field/alias :enemies}]]]}
           query-str (str "{employee(id:1,active:true){name,address,mates:friends{name,email},enemies:friends{name,email}}}")]
       (is (= query-str (v/graphql-query data)))))
 
   (testing "Should create a valid graphql query with fragment"
-    (let [data {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
-                                   :query/alias :workhorse}
-                                  {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
-                                   :query/alias :boss}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]]]}]}
+    (let [data      {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
+                                        :query/alias :workhorse}
+                                       {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
+                                        :query/alias :boss}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]]]}]}
           query-str (str "{workhorse:employee(id:1,active:true){...comparisonFields},boss:employee(id:2,active:true){...comparisonFields}} "
                          "fragment comparisonFields on Worker{name,address,friends{name,email}}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with multiple fragments"
-    (let [data {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
-                                   :query/alias :workhorse}
-                                  {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
-                                   :query/alias :boss}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]]]}
-                                  {:fragment/name   "secondFragment"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name]}]}
+    (let [data      {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
+                                        :query/alias :workhorse}
+                                       {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
+                                        :query/alias :boss}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]]]}
+                                       {:fragment/name   "secondFragment"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name]}]}
           query-str (str "{workhorse:employee(id:1,active:true){...comparisonFields},boss:employee(id:2,active:true){...comparisonFields}} "
                          "fragment comparisonFields on Worker{name,address,friends{name,email}},"
                          "fragment secondFragment on Worker{name}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with multiple fragments for fields (deals with unions)"
-    (let [data {:venia/queries   [{:query/data  [:employee {:id 1 :active true} [[:fragment/comparisonFields :fragment/secondFragment]] ]
-                                   :query/alias :workhorse}
-                                  {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
-                                   :query/alias :boss}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]]]}
-                                  {:fragment/name   "secondFragment"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name]}]}
+    (let [data      {:venia/queries   [{:query/data  [:employee {:id 1 :active true} [[:fragment/comparisonFields :fragment/secondFragment]] ]
+                                        :query/alias :workhorse}
+                                       {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
+                                        :query/alias :boss}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]]]}
+                                       {:fragment/name   "secondFragment"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name]}]}
           query-str (str "{workhorse:employee(id:1,active:true){...comparisonFields ...secondFragment},boss:employee(id:2,active:true){...comparisonFields}} "
                          "fragment comparisonFields on Worker{name,address,friends{name,email}},"
                          "fragment secondFragment on Worker{name}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with nested fragments (deals with unions)"
-    (let [data {:venia/queries   [{:query/data  [:employee {:id 1 :active true} [[:data [:fragment/comparisonFields :fragment/secondFragment]]] ]
-                                   :query/alias :workhorse}
-                                  {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
-                                   :query/alias :boss}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]]]}
-                                  {:fragment/name   "secondFragment"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name]}]}
+    (let [data      {:venia/queries   [{:query/data  [:employee {:id 1 :active true} [[:data [:fragment/comparisonFields :fragment/secondFragment]]] ]
+                                        :query/alias :workhorse}
+                                       {:query/data  [:employee {:id 2 :active true} :fragment/comparisonFields]
+                                        :query/alias :boss}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]]]}
+                                       {:fragment/name   "secondFragment"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name]}]}
           query-str (str "{workhorse:employee(id:1,active:true){data{...comparisonFields ...secondFragment}},boss:employee(id:2,active:true){...comparisonFields}} "
                          "fragment comparisonFields on Worker{name,address,friends{name,email}},"
                          "fragment secondFragment on Worker{name}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with a fragment within a fragment field (deals with unions)"
-    (let [data {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
-                                   :query/alias :workhorse}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]] [:pet [:fragment/dog :fragment/cat]]]}
-                                  {:fragment/name   "dog"
-                                   :fragment/type   :Dog
-                                   :fragment/fields [:name :bark]}
-                                  {:fragment/name   "cat"
-                                   :fragment/type   :Cat
-                                   :fragment/fields [:name :purr]}]}
+    (let [data      {:venia/queries   [{:query/data  [:employee {:id 1 :active true} :fragment/comparisonFields]
+                                        :query/alias :workhorse}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]] [:pet [:fragment/dog :fragment/cat]]]}
+                                       {:fragment/name   "dog"
+                                        :fragment/type   :Dog
+                                        :fragment/fields [:name :bark]}
+                                       {:fragment/name   "cat"
+                                        :fragment/type   :Cat
+                                        :fragment/fields [:name :purr]}]}
           query-str (str "{workhorse:employee(id:1,active:true){...comparisonFields}} "
                          "fragment comparisonFields on Worker{name,address,friends{name,email},pet{...dog ...cat}},"
                          "fragment dog on Dog{name,bark},"
                          "fragment cat on Cat{name,purr}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with variables"
-    (let [data {:venia/operation {:operation/type :query
-                                  :operation/name "employeeQuery"}
-                :venia/variables [{:variable/name "id"
-                                   :variable/type :Int}
-                                  {:variable/name "name"
-                                   :variable/type :String}]
-                :venia/queries   [[:employee {:id     :$id
-                                              :active true
-                                              :name   :$name}
-                                   [:name :address [:friends [:name :email]]]]]}
+    (let [data      {:venia/operation {:operation/type :query
+                                       :operation/name "employeeQuery"}
+                     :venia/variables [{:variable/name "id"
+                                        :variable/type :Int}
+                                       {:variable/name "name"
+                                        :variable/type :String}]
+                     :venia/queries   [[:employee {:id     :$id
+                                                   :active true
+                                                   :name   :$name}
+                                        [:name :address [:friends [:name :email]]]]]}
           query-str (str "query employeeQuery($id:Int,$name:String){employee(id:$id,active:true,name:$name){name,address,friends{name,email}}}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with variables of list type"
@@ -264,50 +266,50 @@
                      :venia/variables [{:variable/name "id"
                                         :variable/type [:Int]}
                                        {:variable/name "name"
-                                        :variable/type :String}]
+                                        :variable/type [:required [:String]]}]
                      :venia/queries   [[:employee {:id     :$id
                                                    :active true
                                                    :name   :$name}
                                         [:name :address [:friends [:name :email]]]]]}
-          query-str (str "query employeeQuery($id:[Int],$name:String){employee(id:$id,active:true,name:$name){name,address,friends{name,email}}}")
+          query-str (str "query employeeQuery($id:[Int],$name:[String]!){employee(id:$id,active:true,name:$name){name,address,friends{name,email}}}")
           result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql query with variables, aliases and fragments"
-    (let [data {:venia/operation {:operation/type :query
-                                  :operation/name "employeeQuery"}
-                :venia/variables [{:variable/name "id"
-                                   :variable/type :Int}
-                                  {:variable/name "name"
-                                   :variable/type :String}]
-                :venia/queries   [{:query/data  [:employee {:id     :$id
-                                                            :active true
-                                                            :name   :$name}
-                                                 :fragment/comparisonFields]
-                                   :query/alias :workhorse}
-                                  {:query/data  [:employee {:id     :$id
-                                                            :active false}
-                                                 :fragment/comparisonFields]
-                                   :query/alias :boss}]
-                :venia/fragments [{:fragment/name   "comparisonFields"
-                                   :fragment/type   :Worker
-                                   :fragment/fields [:name :address [:friends [:name :email]]]}]}
+    (let [data      {:venia/operation {:operation/type :query
+                                       :operation/name "employeeQuery"}
+                     :venia/variables [{:variable/name "id"
+                                        :variable/type :Int}
+                                       {:variable/name "name"
+                                        :variable/type :String}]
+                     :venia/queries   [{:query/data  [:employee {:id     :$id
+                                                                 :active true
+                                                                 :name   :$name}
+                                                      :fragment/comparisonFields]
+                                        :query/alias :workhorse}
+                                       {:query/data  [:employee {:id     :$id
+                                                                 :active false}
+                                                      :fragment/comparisonFields]
+                                        :query/alias :boss}]
+                     :venia/fragments [{:fragment/name   "comparisonFields"
+                                        :fragment/type   :Worker
+                                        :fragment/fields [:name :address [:friends [:name :email]]]}]}
           query-str (str "query employeeQuery($id:Int,$name:String){workhorse:employee(id:$id,active:true,name:$name){...comparisonFields},"
                          "boss:employee(id:$id,active:false){...comparisonFields}} fragment comparisonFields on Worker{name,address,friends{name,email}}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result))))
 
   (testing "Should create a valid graphql mutation"
-    (let [data {:venia/operation {:operation/type :mutation
-                                  :operation/name "AddProjectToEmployee"}
-                :venia/variables [{:variable/name "id"
-                                   :variable/type :Int!}
-                                  {:variable/name "project"
-                                   :variable/type :ProjectNameInput!}]
-                :venia/queries   [[:addProject {:employeeId :$id
-                                                :project    :$project}
-                                   [:allocation :name]]]}
+    (let [data      {:venia/operation {:operation/type :mutation
+                                       :operation/name "AddProjectToEmployee"}
+                     :venia/variables [{:variable/name "id"
+                                        :variable/type :Int!}
+                                       {:variable/name "project"
+                                        :variable/type :ProjectNameInput!}]
+                     :venia/queries   [[:addProject {:employeeId :$id
+                                                     :project    :$project}
+                                        [:allocation :name]]]}
           query-str (str "mutation AddProjectToEmployee($id:Int!,$project:ProjectNameInput!){addProject(employeeId:$id,project:$project){allocation,name}}")
-          result (v/graphql-query data)]
+          result    (v/graphql-query data)]
       (is (= query-str result)))))
 

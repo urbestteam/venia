@@ -151,8 +151,13 @@
 
 (s/def :variable/keyword keyword?)
 (s/def :variable/list (s/coll-of keyword? :count 1))
+(s/def :variable/required (s/tuple #{:required}
+                                   (s/or :keyword :variable/keyword
+                                         :list :variable/list)))
+
 (s/def :variable/type (s/or :keyword :variable/keyword
-                            :list :variable/list))
+                            :list :variable/list
+                            :required :variable/required))
 
 (s/def :query/variable (s/keys :req [:variable/name :variable/type]
                                :opt [:variable/default]))
