@@ -166,6 +166,13 @@
   (or (keyword? fields)
       (not (empty? fields))))
 
+(defn apply-prefix [prefix value]
+  (->> value name (drop 1) (apply str) (str "$" prefix "_") keyword))
+
+(defn reduce-prefix-to-args [prefix]
+  (fn [acc [k v]]
+    (assoc acc k (if-not (keyword? v) v (apply-prefix prefix v)))))
+
 (defmulti ->query-str
   (fn [query]
     (cond (vector? query) (first query)
@@ -222,7 +229,12 @@
 
 (defmethod ->query-str :venia/query-with-data
   [[_ query]]
-  (let [query-str (->query-str (:query/data query))
+  (let [args (get-in query [:query/data :args])
+        data (merge (:query/data query)
+                    {:args args}
+                    (when (:query/prefix query)
+                      {:prefix (:query/prefix query)}))
+        query-str (->query-str data)
         alias (when (:query/alias query) (str (name (:query/alias query)) ":"))]
     (str alias query-str)))
 

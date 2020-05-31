@@ -131,8 +131,9 @@
 (s/def :query/data (s/cat :query :venia/query-name :args (s/? :venia/args) :fields (s/? :venia/fields)))
 (s/def :venia/query (s/or :query/data :query/data
                           :venia/query-with-data (s/keys :req [:query/data]
-                                                         :opt [:query/alias])))
+                                                         :opt [:query/alias :query/prefix])))
 (s/def :query/alias keyword?)
+(s/def :query/prefix string?)
 
 (s/def :field/data :venia/fields)
 (s/def :field/alias :query/alias)
