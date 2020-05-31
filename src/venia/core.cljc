@@ -259,3 +259,47 @@
   [data]
   (-> (spec/query->spec data)
       ->query-str))
+
+(defn pack-vareables [composite]
+  (fn [values]
+    (reduce
+     (fn [acc [prefix data]]
+       (merge acc (reduce #(assoc %1 (keyword (str prefix "_" (name (first %2)))) (second %2)) {} data)))
+     {}
+     (zipmap (keys composite) values))))
+
+(defn reduce-compose
+  [[index
+    variable-composite
+    {acc-variables :venia/variables
+     acc-queries :venia/queries
+     acc-fragments :venia/fragments
+     acc-operation :venia/operation
+     :as acc}]
+   {query-operation :venia/operation :as query}]
+  (let [index       (inc index)
+        prefix      (if query-operation
+                      (str (:operation/name query-operation) "_" index)
+                      (str (:operation/name acc-operation) "_" index))
+        variable-composite-fn #(update %1 prefix conj (keyword (:variable/name %2)))
+        variable-fn #(assoc %1 :variable/prefix prefix)
+        query-fn    #(hash-map :query/data (if (:query/data %1) (:query/data %1) %1)
+                               :query/alias (keyword prefix)
+                               :query/prefix prefix)
+        variables   (map variable-fn (get-in query [:venia/variables]))
+        queries     (map query-fn (get-in query [:venia/queries]))
+        fragments   (get-in query [:venia/fragments])]
+    [index
+     (reduce variable-composite-fn variable-composite variables)
+     (cond-> acc
+       variables
+       (assoc :venia/variables (concat acc-variables variables))
+       queries
+       (assoc :venia/queries (concat acc-queries queries))
+       fragments
+       (assoc :venia/fragments (conj acc-fragments fragments)))]))
+
+(defn compose [initial-query & queries]
+  (let [[_ variable-composite query] (reduce reduce-compose [0 {} initial-query] queries)]
+    {:query query
+     :pack (pack-vareables variable-composite)}))
