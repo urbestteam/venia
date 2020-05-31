@@ -135,10 +135,17 @@
 (defn variables->str
   "Given a vector of variable maps, formats them and concatenates to string.
 
-  E.g. (variables->str [{:variable/name \"id\" :variable/type :Int}]) => \"$id: Int\""
+  E.g. (variables->str [{:variable/name \"id\" :variable/type :Int}]) => \"$id: Int\"
+  E.g. (variables->str \"prefix\" [{:variable/name \"id\" :variable/type :Int}]) => \"$prefix_id: Int\""
   [variables]
-  (->> (for [{var-name :variable/name var-type :variable/type var-default :variable/default} variables]
-         (str "$" var-name ":" (var-type->str var-type) (when var-default (str "=" (arg->str var-default)))))
+  (->> (for [{var-name :variable/name
+              var-type :variable/type
+              var-prefix :variable/prefix
+              var-default :variable/default}
+             variables]
+         (str "$" (when var-prefix (str var-prefix "_")) var-name
+              ":" (var-type->str var-type)
+              (when var-default (str "=" (arg->str var-default)))))
        (interpose ",")
        (apply str)))
 

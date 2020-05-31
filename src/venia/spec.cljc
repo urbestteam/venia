@@ -148,7 +148,7 @@
 (s/def :venia/operation (s/keys :req [:operation/type :operation/name]))
 
 (s/def :variable/name string?)
-
+(s/def :variable/prefix string?)
 (s/def :variable/keyword keyword?)
 (s/def :variable/list (s/coll-of keyword? :count 1))
 (s/def :variable/required (s/tuple #{:required}
@@ -160,7 +160,7 @@
                             :required :variable/required))
 
 (s/def :query/variable (s/keys :req [:variable/name :variable/type]
-                               :opt [:variable/default]))
+                               :opt [:variable/default :variable/prefix]))
 (s/def :venia/variables (s/coll-of :query/variable :min-count 1))
 
 (s/def :venia/queries (s/coll-of :venia/query :min-count 1))
