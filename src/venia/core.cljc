@@ -14,17 +14,19 @@
   "Given a map of query arguments, formats them and concatenates to string.
 
   E.g. (arguments->str {:id 1 :type \"human\"}) => id:1,type:\"human\""
-  [args]
-  (->> (for [[k v] args]
-         [(name k) ":" (arg->str v)])
-       (interpose ",")
-       flatten
-       (apply str)))
+  ([args]
+   (arguments->str args ""))
+  ([args prefix]
+   (->> (for [[k v] args]
+          [(name k) ":" (arg->str v prefix)])
+        (interpose ",")
+        flatten
+        (apply str))))
 
 (defn sequential->str
   "Given something that is sequential format it to be like a JSON array."
-  [arg]
-  (str "[" (apply str (interpose "," (map arg->str arg))) "]"))
+  [arg prefix]
+  (str "[" (apply str (interpose "," (map #(arg->str %1 prefix) arg))) "]"))
 
 (defn encode-string
   "Handles escaping special characters."
@@ -95,35 +97,37 @@
 (defn fields->str
   "Given a spec conformed vector of query fields (and possibly nested fields),
   concatenates them to string, keeping nested structures intact."
-  [fields]
-  (if (keyword? fields)
-    (str "..." (name fields))
-    (->> (for [[type value] fields]
-           (condp = type
-             :venia/meta-field (meta-field->str value)
-             :venia/field (name value)
-             :venia/field-with-args (str (name (:venia/field value))
-                                         (when (:args value)
-                                           (str "(" (arguments->str (:args value)) ")")))
-             :venia/field-with-data (str (when-let [alias (name (:field/alias value))]
-                                           (str alias ":"))
-                                         (fields->str (:field/data value)))
-             :venia/nested-field (str (name (:venia/nested-field-root value))
-                                      (when (:args value)
-                                        (str "(" (arguments->str (:args value)) ")"))
-                                      "{"
-                                      (fields->str (:venia/nested-field-children value))
-                                      "}")
-             :venia/nested-field-arg-only (str (name (:venia/nested-field-root value))
-                                               (str "(" (arguments->str (:args value)) ")"))
-             :venia/fragments (str/join " " (map #(str "..." (name %)) value))
-             :venia/nested-field-with-fragments (str (name (:venia/nested-field-root value))
-                                                     "{"
-                                                     (str/join " " (map #(str "..." (name %))
-                                                                        (:venia/fragments value)))
-                                                     "}")))
-         (interpose ",")
-         (apply str))))
+  ([fields]
+   (fields->str fields ""))
+  ([fields prefix]
+   (if (keyword? fields)
+     (str "..." (name fields))
+     (->> (for [[type value] fields]
+            (condp = type
+              :venia/meta-field (meta-field->str value)
+              :venia/field (name value)
+              :venia/field-with-args (str (name (:venia/field value))
+                                          (when (:args value)
+                                            (str "(" (arguments->str (:args value) prefix) ")")))
+              :venia/field-with-data (str (when-let [alias (name (:field/alias value))]
+                                            (str alias ":"))
+                                          (fields->str (:field/data value)))
+              :venia/nested-field (str (name (:venia/nested-field-root value))
+                                       (when (:args value)
+                                         (str "(" (arguments->str (:args value) prefix) ")"))
+                                       "{"
+                                       (fields->str (:venia/nested-field-children value) prefix)
+                                       "}")
+              :venia/nested-field-arg-only (str (name (:venia/nested-field-root value))
+                                                (str "(" (arguments->str (:args value) prefix) ")"))
+              :venia/fragments (str/join " " (map #(str "..." (name %)) value))
+              :venia/nested-field-with-fragments (str (name (:venia/nested-field-root value))
+                                                      "{"
+                                                      (str/join " " (map #(str "..." (name %))
+                                                                         (:venia/fragments value)))
+                                                      "}")))
+          (interpose ",")
+          (apply str)))))
 
 ;; TODO: add support for required list and matrix
 (defn var-type->str
@@ -151,7 +155,7 @@
              variables]
          (str "$" (when var-prefix (str var-prefix "_")) var-name
               ":" (var-type->str var-type)
-              (when var-default (str "=" (arg->str var-default)))))
+              (when var-default (str "=" (arg->str var-default "")))))
        (interpose ",")
        (apply str)))
 
@@ -256,8 +260,9 @@
   [query]
   "Processes a query map (with query name, args and fields)"
   (let [query-str (name (:query query))
-        args (when (:args query) (str "(" (arguments->str (:args query)) ")"))
-        fields (when (include-fields? (:fields query)) (str "{" (fields->str (:fields query)) "}"))]
+        args      (when (:args query)
+                    (str "(" (arguments->str (:args query) (:prefix query)) ")"))
+        fields (when (include-fields? (:fields query)) (str "{" (fields->str (:fields query) (:prefix query)) "}"))]
     (str query-str args fields)))
 
 (defn graphql-query
