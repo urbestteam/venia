@@ -1,14 +1,14 @@
 (ns venia.core
   (:require [venia.spec :as spec]
             [clojure.string :as str])
-  #?(:clj
-     (:import (clojure.lang IPersistentMap Keyword IPersistentCollection)
-              (java.util UUID))))
+  #? (:clj
+      (:import (clojure.lang IPersistentMap Keyword IPersistentCollection)
+               (java.util UUID))))
 
 (defprotocol ArgumentFormatter
   "Protocol responsible for query arguments' formatting to string.
   Has separate implementations for general data types in cljs and clj."
-  (arg->str [arg]))
+  (arg->str [arg prefix]))
 
 (defn arguments->str
   "Given a map of query arguments, formats them and concatenates to string.
@@ -37,49 +37,55 @@
                              \formfeed  "\\f"
                              \backspace "\\b"}) "\""))
 
-#?(:clj (extend-protocol ArgumentFormatter
-          nil
-          (arg->str [arg] "null")
-          String
-          (arg->str [arg] (encode-string arg))
-          UUID
-          (arg->str [arg] (str "\"" arg "\""))
-          IPersistentMap
-          (arg->str [arg] (str "{" (arguments->str arg) "}"))
-          IPersistentCollection
-          (arg->str [arg] (str "[" (apply str (interpose "," (map arg->str arg))) "]"))
-          Keyword
-          (arg->str [arg] (name arg))
-          Object
-          (arg->str [arg] (str arg))))
-
-#?(:cljs (extend-protocol ArgumentFormatter
+#? (:clj (extend-protocol ArgumentFormatter
            nil
-           (arg->str [arg] "null")
-           string
-           (arg->str [arg] (encode-string arg))
+           (arg->str [arg prefix] "null")
+           String
+           (arg->str [arg prefix] (encode-string arg))
            UUID
-           (arg->str [arg] (str "\"" arg "\""))
-           PersistentArrayMap
-           (arg->str [arg] (str "{" (arguments->str arg) "}"))
-           PersistentHashMap
-           (arg->str [arg] (str "{" (arguments->str arg) "}"))
-           PersistentVector
-           (arg->str [arg] (sequential->str arg))
-           IndexedSeq
-           (arg->str [arg] (sequential->str arg))
-           LazySeq
-           (arg->str [arg] (sequential->str arg))
-           List
-           (arg->str [arg] (sequential->str arg))
+           (arg->str [arg prefix] (str "\"" arg "\""))
+           IPersistentMap
+           (arg->str [arg prefix] (str "{" (arguments->str arg prefix) "}"))
+           IPersistentCollection
+           (arg->str [arg prefix] (str "[" (apply str (interpose "," (map #(arg->str %1 prefix) arg))) "]"))
            Keyword
-           (arg->str [arg] (name arg))
-           number
-           (arg->str [arg] (str arg))
-           object
-           (arg->str [arg] (str arg))
-           boolean
-           (arg->str [arg] (str arg))))
+           (arg->str [arg prefix]
+             (if (str/blank? prefix)
+               (name arg)
+               (->> (name arg) (drop 1) (apply str) (str "$" prefix "_"))))
+           Object
+           (arg->str [arg prefix] (str arg))))
+
+#? (:cljs (extend-protocol ArgumentFormatter
+            nil
+            (arg->str [arg prefix] "null")
+            string
+            (arg->str [arg prefix] (encode-string arg))
+            UUID
+            (arg->str [arg prefix] (str "\"" arg "\""))
+            PersistentArrayMap
+            (arg->str [arg prefix] (str "{" (arguments->str arg prefix) "}"))
+            PersistentHashMap
+            (arg->str [arg prefix] (str "{" (arguments->str arg prefix) "}"))
+            PersistentVector
+            (arg->str [arg prefix] (sequential->str arg prefix))
+            IndexedSeq
+            (arg->str [arg prefix] (sequential->str arg prefix))
+            LazySeq
+            (arg->str [arg prefix] (sequential->str arg prefix))
+            List
+            (arg->str [arg prefix] (sequential->str arg prefix))
+            Keyword
+            (arg->str [arg prefix]
+              (if (str/blank? prefix)
+                (name arg)
+                (->> (name arg) (drop 1) (apply str) (str "$" prefix "_"))))
+            number
+            (arg->str [arg prefix] (str arg))
+            object
+            (arg->str [arg prefix] (str arg))
+            boolean
+            (arg->str [arg prefix] (str arg))))
 
 (defn meta-field->str
   "Converts namespaced meta field keyword to graphql format, e.g :meta/typename -> __typename"
